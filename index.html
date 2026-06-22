@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>毛线编织行数标注器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <div>
+        <h1>毛线编织行数标注器</h1>
+        <p>粘贴文字图解，按行标注，边织边记录进度。</p>
+      </div>
+      <button class="ghost-button" id="clearAllButton" type="button">清空全部</button>
+    </header>
+
+    <section class="workspace" aria-label="编织行数标注工具">
+      <section class="input-panel" aria-labelledby="inputTitle">
+        <div class="project-tools" aria-label="项目管理">
+          <div class="panel-heading">
+            <h2>项目</h2>
+            <span class="hint">可分别保存多个图解</span>
+          </div>
+
+          <label class="field-label" for="projectSelect">选择项目</label>
+          <select id="projectSelect"></select>
+
+          <label class="field-label" for="projectNameInput">项目名称</label>
+          <input id="projectNameInput" type="text" placeholder="例如：毛衣前片">
+
+          <div class="compact-actions">
+            <button id="newProjectButton" type="button">新建项目</button>
+            <button id="deleteProjectButton" type="button">删除当前项目</button>
+          </div>
+
+          <div class="compact-actions">
+            <button id="exportButton" type="button">导出图解文件</button>
+            <label class="file-button" for="importFileInput">导入图解文件</label>
+            <input id="importFileInput" type="file" accept=".json,.txt,.md,.doc,.docx,.pdf,application/json,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+          </div>
+        </div>
+
+        <div class="panel-heading">
+          <h2 id="inputTitle">文字图解</h2>
+          <span class="hint">每一行会生成一个步骤</span>
+        </div>
+        <textarea
+          id="patternInput"
+          placeholder="在这里粘贴或输入毛线编织文字图解，例如：
+起 48 针
+第 1 圈：下针一圈
+第 2 圈：2 下针，1 加针，重复到圈尾"
+        ></textarea>
+        <button class="primary-button" id="generateButton" type="button">生成图解</button>
+      </section>
+
+      <section class="chart-panel" aria-labelledby="chartTitle">
+        <div class="panel-heading">
+          <h2 id="chartTitle">行数图解</h2>
+          <span class="hint" id="saveStatus">已自动保存</span>
+        </div>
+        <div class="empty-state" id="emptyState">
+          还没有生成图解。请先在左侧输入文字内容。
+        </div>
+        <div class="pdf-viewer is-hidden" id="pdfViewer">
+          <iframe id="pdfFrame" title="PDF 图解预览"></iframe>
+          <div class="pdf-ruler" id="pdfRuler" role="slider" tabindex="0" aria-label="高亮行标尺">
+            <span>拖动标尺</span>
+          </div>
+        </div>
+        <ol class="row-list" id="rowList" aria-live="polite"></ol>
+      </section>
+
+      <aside class="counter-panel" aria-labelledby="counterTitle">
+        <div class="counter-section">
+          <h2 id="counterTitle">当前进度</h2>
+          <div class="counter-box" aria-live="polite">
+            <span id="currentLine">0</span>
+            <span class="counter-divider">/</span>
+            <span id="totalLines">0</span>
+          </div>
+          <p class="counter-label" id="progressLabel">当前行 / 总行数</p>
+
+          <div class="button-group">
+            <button id="prevButton" type="button">上一行</button>
+            <button id="nextButton" type="button">下一行</button>
+            <button id="resetButton" type="button">重置</button>
+          </div>
+        </div>
+
+        <div class="counter-section stitch-section" aria-labelledby="stitchCounterTitle">
+          <h2 id="stitchCounterTitle">针数计数</h2>
+          <div class="counter-box stitch-box" aria-live="polite">
+            <span id="stitchCount">0</span>
+          </div>
+          <p class="counter-label">当前行已织针数</p>
+
+          <div class="stitch-button-group">
+            <button id="stitchMinusButton" type="button">-1</button>
+            <button id="stitchPlusButton" type="button">+1</button>
+            <button id="stitchResetButton" type="button">重置针数</button>
+          </div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
