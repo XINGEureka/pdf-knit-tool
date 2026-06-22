@@ -14,6 +14,7 @@ const rowList = document.querySelector("#rowList");
 const emptyState = document.querySelector("#emptyState");
 const pdfViewer = document.querySelector("#pdfViewer");
 const pdfFrame = document.querySelector("#pdfFrame");
+const pdfCanvasStack = document.querySelector("#pdfCanvasStack");
 const pdfRuler = document.querySelector("#pdfRuler");
 const currentLine = document.querySelector("#currentLine");
 const totalLines = document.querySelector("#totalLines");
@@ -31,6 +32,17 @@ let state = {
   activeProjectId: "",
   projects: []
 };
+let pdfRenderToken = 0;
+let resizeTimer = 0;
+
+const PDFJS_WORKER_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+if (window.pdfjsLib) {
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+  console.log("PDF.js worker 已设置：", PDFJS_WORKER_URL);
+} else {
+  console.log("PDF.js 未加载，PDF canvas 渲染不可用。");
+}
 
 function createProject(name = "未命名项目") {
   return {
@@ -388,7 +400,6 @@ function exportProject() {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
   saveState("图解文件已导出");
 }
 
@@ -433,7 +444,9 @@ async function importPdfAsProject(file) {
   const projectName = (file.name || "PDF 图解").replace(/\.[^.]+$/, "") || "PDF 图解";
   const project = createProject(projectName);
 
+  console.log("开始读取 PDF 文件：", file.name, file.size);
   project.pdfDataUrl = await readFileAsDataUrl(file);
+  console.log("PDF 文件读取完成，DataURL 长度：", project.pdfDataUrl.length);
   project.pdfRulerTop = 120;
   project.rows = [];
   project.input = "";
@@ -742,6 +755,7 @@ function renderRows(project) {
   }
 
   pdfFrame.removeAttribute("src");
+  pdfCanvasStack.innerHTML = "";
 
   project.rows.forEach((row, index) => {
     const item = document.createElement("li");
@@ -814,15 +828,72 @@ function renderRows(project) {
 }
 
 function renderPdfViewer(project) {
-  if (pdfFrame.getAttribute("src") !== project.pdfDataUrl) {
-    pdfFrame.setAttribute("src", project.pdfDataUrl);
-  }
+  pdfFrame.removeAttribute("src");
+  renderPdfCanvases(project);
 
   const maxTop = Math.max(0, pdfViewer.clientHeight - pdfRuler.offsetHeight);
   const top = Math.min(Math.max(project.pdfRulerTop || 120, 0), maxTop);
 
   project.pdfRulerTop = top;
   pdfRuler.style.top = `${top}px`;
+}
+
+function dataUrlToUint8Array(dataUrl) {
+  const base64 = dataUrl.split(",")[1] || "";
+  const binary = window.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return bytes;
+}
+
+async function renderPdfCanvases(project) {
+  if (!project.pdfDataUrl) {
+    return;
+  }
+
+  if (!window.pdfjsLib) {
+    console.log("PDF 渲染失败：PDF.js 未加载。");
+    return;
+  }
+
+  const token = ++pdfRenderToken;
+  const viewportWidth = Math.max(280, pdfViewer.clientWidth || window.innerWidth);
+
+  console.log("开始渲染 PDF，viewport 宽度：", viewportWidth);
+  pdfCanvasStack.innerHTML = "";
+
+  try {
+    const pdf = await window.pdfjsLib.getDocument({ data: dataUrlToUint8Array(project.pdfDataUrl) }).promise;
+    console.log("PDF 加载成功，页数：", pdf.numPages);
+
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      if (token !== pdfRenderToken) {
+        console.log("PDF 渲染被新的 resize 或项目切换中断。");
+        return;
+      }
+
+      const page = await pdf.getPage(pageNumber);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const scale = Math.max(0.1, (viewportWidth - 24) / baseViewport.width);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      canvas.style.width = "100%";
+      canvas.style.height = "auto";
+      pdfCanvasStack.appendChild(canvas);
+      await page.render({ canvasContext: context, viewport }).promise;
+      console.log(`PDF 第 ${pageNumber} 页渲染成功：`, canvas.width, canvas.height);
+    }
+  } catch (error) {
+    console.log("PDF 渲染失败：", error);
+  }
 }
 
 function renderCounter(project) {
@@ -881,8 +952,14 @@ newProjectButton.addEventListener("click", addProject);
 deleteProjectButton.addEventListener("click", deleteProject);
 exportButton.addEventListener("click", exportProject);
 
+importFileInput.addEventListener("click", () => {
+  importFileInput.value = "";
+});
+
 importFileInput.addEventListener("change", () => {
   const file = importFileInput.files && importFileInput.files[0];
+
+  console.log("文件选择 change 事件触发：", file ? file.name : "未选择文件");
 
   if (file) {
     readImportedFile(file);
@@ -962,6 +1039,20 @@ pdfRuler.addEventListener("keydown", (event) => {
 clearAllButton.addEventListener("click", clearAll);
 
 window.addEventListener("pagehide", persistStateSilently);
+
+window.addEventListener("resize", () => {
+  const project = getActiveProject();
+
+  if (!project || !project.pdfDataUrl) {
+    return;
+  }
+
+  window.clearTimeout(resizeTimer);
+  resizeTimer = window.setTimeout(() => {
+    console.log("窗口尺寸变化，重新渲染 PDF。");
+    renderPdfViewer(project);
+  }, 180);
+});
 
 loadState();
 render();

@@ -178,7 +178,13 @@ select:focus {
 }
 
 #importFileInput {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 h2 {
@@ -339,11 +345,13 @@ textarea:focus {
 
 .pdf-viewer {
   position: relative;
+  height: 100vh;
   min-height: 620px;
-  overflow: hidden;
+  overflow: auto;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #fffefb;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pdf-viewer.is-hidden {
@@ -351,10 +359,25 @@ textarea:focus {
 }
 
 .pdf-viewer iframe {
+  display: none;
+}
+
+.pdf-canvas-stack {
+  display: grid;
+  gap: 12px;
   width: 100%;
-  height: 620px;
-  border: 0;
+  height: 100vh;
+  min-height: 100vh;
+  padding: 12px;
+  background: #d8d4cc;
+}
+
+.pdf-canvas-stack canvas {
+  display: block;
+  width: 100%;
+  height: auto;
   background: #fff;
+  box-shadow: 0 4px 16px rgba(47, 43, 37, 0.12);
 }
 
 .pdf-ruler {
@@ -504,13 +527,20 @@ body.pdf-mode .row-list {
 }
 
 body.pdf-mode .pdf-viewer {
+  height: 100vh;
   min-height: 100vh;
   border: 0;
   border-radius: 0;
 }
 
 body.pdf-mode .pdf-viewer iframe {
-  height: calc(100vh - 190px);
+  display: none;
+}
+
+body.pdf-mode .pdf-canvas-stack {
+  height: 100vh;
+  min-height: 100vh;
+  padding-bottom: 210px;
 }
 
 body.pdf-mode .counter-panel {
@@ -627,6 +657,10 @@ body.pdf-mode #stitchResetButton {
     height: 680px;
   }
 
+  .pdf-viewer {
+    height: 680px;
+  }
+
   body.pdf-mode .app-header {
     top: 14px;
     right: auto;
@@ -653,7 +687,11 @@ body.pdf-mode #stitchResetButton {
   }
 
   body.pdf-mode .pdf-viewer iframe {
-    height: 100vh;
+    display: none;
+  }
+
+  body.pdf-mode .pdf-canvas-stack {
+    padding-bottom: 12px;
   }
 
   body.pdf-mode .counter-box {

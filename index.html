@@ -66,6 +66,7 @@
         </div>
         <div class="pdf-viewer is-hidden" id="pdfViewer">
           <iframe id="pdfFrame" title="PDF 图解预览"></iframe>
+          <div class="pdf-canvas-stack" id="pdfCanvasStack" aria-label="PDF 图解画布"></div>
           <div class="pdf-ruler" id="pdfRuler" role="slider" tabindex="0" aria-label="高亮行标尺">
             <span>拖动标尺</span>
           </div>
@@ -107,6 +108,7 @@
     </section>
   </main>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
